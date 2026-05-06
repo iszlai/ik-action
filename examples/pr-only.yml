@@ -1,0 +1,21 @@
+# Run inkode only on pull requests — useful when you don't want to spend a
+# scan slot on every push to a feature branch.
+name: ik
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: iszlai/ik-action@v1
+        with:
+          token: ${{ secrets.IK_TOKEN }}
+          fail-on: new-errors

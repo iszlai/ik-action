@@ -1,0 +1,32 @@
+# Run the inkode scan on one matrix leg only — the scan reads the source tree,
+# not the build output, so running it across every Go version would just
+# duplicate uploads.
+name: ci
+on: [pull_request, push]
+
+jobs:
+  test:
+    strategy:
+      matrix:
+        go: ['1.22', '1.23']
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go }}
+      - run: go test ./...
+
+  ik:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: iszlai/ik-action@v1
+        with:
+          token: ${{ secrets.IK_TOKEN }}
+          fail-on: new-errors

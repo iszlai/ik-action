@@ -1,0 +1,160 @@
+name: 'inkode'
+description: 'Run inkode (ik) against this repository and report findings on every PR.'
+author: 'inkode'
+branding:
+  icon: 'check-circle'
+  color: 'purple'
+
+inputs:
+  token:
+    description: 'Project push token from inkode.co. Set as a repo secret (e.g. IK_TOKEN) and pass it here.'
+    required: true
+  endpoint:
+    description: 'inkode server URL.'
+    default: 'https://ik.inkode.co'
+  fail-on:
+    description: 'Policy: never | score:N | new-errors | new-warnings | score-drop:N'
+    default: 'new-errors'
+  output:
+    description: 'ik run --output value. github-annotations renders findings inline; switch to sarif if you upload to Code Scanning.'
+    default: 'github-annotations'
+  comment:
+    description: 'Post (or update) a sticky PR comment with the report summary.'
+    default: 'true'
+  ik-version:
+    description: 'ik release tag to install (e.g. v0.5.0). Default: latest.'
+    default: 'latest'
+  repo-path:
+    description: 'Path to the repository root (passed to ik run -r).'
+    default: '.'
+
+outputs:
+  score:
+    description: 'Overall score 0-100.'
+    value: ${{ steps.diff.outputs.score }}
+  grade:
+    description: 'Letter grade A-F.'
+    value: ${{ steps.diff.outputs.grade }}
+  report-url:
+    description: 'Public URL of the uploaded report.'
+    value: ${{ steps.run.outputs.report-url }}
+
+runs:
+  using: 'composite'
+  steps:
+    # ── 1. Install ik ────────────────────────────────────────────────────────
+    #
+    # Downloads the platform tarball from iszlai/inkode-releases. Avoids the
+    # interactive PATH prompt that install.sh hits on a fresh runner.
+    - name: Install ik
+      shell: bash
+      env:
+        IK_VERSION: ${{ inputs.ik-version }}
+      run: |
+        set -euo pipefail
+        OS="$(uname -s | tr A-Z a-z)"
+        case "$OS" in linux|darwin) ;; *) echo "::error::unsupported OS $OS"; exit 1 ;; esac
+        ARCH="$(uname -m)"
+        case "$ARCH" in
+          x86_64|amd64)  ARCH=amd64 ;;
+          arm64|aarch64) ARCH=arm64 ;;
+          *) echo "::error::unsupported arch $ARCH"; exit 1 ;;
+        esac
+
+        if [ "$IK_VERSION" = "latest" ]; then
+          IK_VERSION=$(curl -fsSL https://api.github.com/repos/iszlai/inkode-releases/releases/latest \
+            | grep '"tag_name"' | sed 's/.*"tag_name": *"\(.*\)".*/\1/')
+        fi
+        VER="${IK_VERSION#v}"
+        TARBALL="inkode_${VER}_${OS}_${ARCH}.tar.gz"
+        URL="https://github.com/iszlai/inkode-releases/releases/download/${IK_VERSION}/${TARBALL}"
+        echo "Installing ik ${IK_VERSION} (${OS}/${ARCH}) from ${URL}"
+
+        DEST="${RUNNER_TEMP}/ik-bin"
+        mkdir -p "$DEST"
+        curl -fsSL "$URL" | tar -xz -C "$DEST"
+        chmod +x "$DEST/ik"
+        echo "$DEST" >> "$GITHUB_PATH"
+
+    # ── 2. Run ik ────────────────────────────────────────────────────────────
+    #
+    # `continue-on-error: true` so a fail-on policy violation doesn't skip the
+    # PR-comment step; we propagate the exit code at the end.
+    - name: Run ik
+      id: run
+      shell: bash
+      continue-on-error: true
+      env:
+        IK_TOKEN: ${{ inputs.token }}
+        NO_COLOR: '1'
+      run: |
+        set +e
+        ik run --ci \
+          -r '${{ inputs.repo-path }}' \
+          --fail-on='${{ inputs.fail-on }}' \
+          --output='${{ inputs.output }}' \
+          | tee "${RUNNER_TEMP}/ik-output.txt"
+        ik_exit=${PIPESTATUS[0]}
+
+        REPORT_URL=$(grep -oE 'https?://[^[:space:]]+/r/[A-Za-z0-9_-]+' "${RUNNER_TEMP}/ik-output.txt" | head -1 || true)
+        NANOID=""
+        if [ -n "$REPORT_URL" ]; then NANOID="${REPORT_URL##*/}"; fi
+        {
+          echo "report-url=${REPORT_URL}"
+          echo "nanoid=${NANOID}"
+          echo "ik-exit=${ik_exit}"
+        } >> "$GITHUB_OUTPUT"
+        exit 0  # actual fail-on enforcement happens at the end
+
+    # ── 3. Fetch diff (score, grade, comment body) ───────────────────────────
+    - name: Fetch diff + comment body
+      id: diff
+      if: steps.run.outputs.nanoid != ''
+      shell: bash
+      env:
+        IK_TOKEN: ${{ inputs.token }}
+      run: |
+        set -euo pipefail
+        NANOID='${{ steps.run.outputs.nanoid }}'
+        BASE='${{ inputs.endpoint }}'
+        DIFF_JSON="${RUNNER_TEMP}/ik-diff.json"
+        COMMENT_MD="${RUNNER_TEMP}/ik-comment.md"
+
+        curl -fsSL -H "Authorization: Bearer ${IK_TOKEN}" \
+          "${BASE}/v1/reports/${NANOID}/diff" -o "$DIFF_JSON" || {
+            echo "::warning::could not fetch diff (status above) — skipping outputs"
+            exit 0
+          }
+        curl -fsSL -H "Authorization: Bearer ${IK_TOKEN}" \
+          "${BASE}/v1/reports/${NANOID}/comment-md" -o "$COMMENT_MD" || true
+
+        SCORE=$(jq -r '.head.score // empty' "$DIFF_JSON")
+        GRADE=$(jq -r '.head.grade // empty' "$DIFF_JSON")
+        {
+          echo "score=${SCORE}"
+          echo "grade=${GRADE}"
+          echo "comment-path=${COMMENT_MD}"
+        } >> "$GITHUB_OUTPUT"
+        echo "ik: score=${SCORE} grade=${GRADE}"
+
+    # ── 4. Post sticky PR comment ────────────────────────────────────────────
+    - name: Post sticky PR comment
+      if: |
+        inputs.comment == 'true'
+        && github.event_name == 'pull_request'
+        && steps.diff.outputs.comment-path != ''
+      uses: marocchino/sticky-pull-request-comment@v2
+      with:
+        header: inkode
+        path: ${{ steps.diff.outputs.comment-path }}
+
+    # ── 5. Re-emit ik's exit code ────────────────────────────────────────────
+    - name: Enforce fail-on policy
+      shell: bash
+      run: |
+        IK_EXIT='${{ steps.run.outputs.ik-exit }}'
+        if [ -z "$IK_EXIT" ] || [ "$IK_EXIT" = "0" ]; then
+          exit 0
+        fi
+        echo "::error::ik run failed --fail-on policy (exit ${IK_EXIT})"
+        exit "$IK_EXIT"

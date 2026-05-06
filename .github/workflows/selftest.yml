@@ -1,0 +1,54 @@
+# Self-test: run the action against this repo on every PR + push, plus a
+# nightly run to catch regressions in the upstream `ik` release. The
+# self-test acts as the action's own QA — if it goes red, the action is
+# broken.
+#
+# Requires repo secret IK_TOKEN: a project push token from inkode.co bound
+# to a project named "iszlai-ik-action" (or whatever slug you create the
+# token against).
+name: selftest
+
+# schedule + workflow_dispatch only. Push/PR triggers would require IK_TOKEN
+# to be configured at the moment of first commit; gate on manual dispatch
+# so the initial bootstrap doesn't fail.
+on:
+  schedule:
+    - cron: '17 5 * * *'   # daily — catches upstream regressions
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  selftest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # The action expects an .ik.yaml at the repo root. Generate a minimal
+      # one for the action repo itself — it has no real code to scan, so the
+      # test exercises end-to-end (download → run → upload → comment) rather
+      # than asserting findings.
+      - name: Stage minimal .ik.yaml
+        run: |
+          cat > .ik.yaml <<'EOF'
+          project:
+            slug: iszlai-ik-action
+            email: selftest@inkode.co
+          api:
+            endpoint: https://ik.inkode.co
+          output:
+            brief_path: .ik/brief.html
+          checks:
+            secrets: { enabled: true }
+            todo-density: { enabled: true }
+          EOF
+
+      - uses: ./
+        with:
+          token: ${{ secrets.IK_TOKEN }}
+          fail-on: never        # selftest must never fail on policy
+          comment: 'false'      # don't comment on self-test PRs
