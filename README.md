@@ -23,9 +23,13 @@ overall score.
 
 ## Quickstart
 
-1. Sign in to your inkode admin page, open your project, and create a push
-   token under **Push tokens**.
-2. Add it as a repo secret called `IK_TOKEN`.
+1. **Get a push token**: email [hello@inkode.co](mailto:hello@inkode.co) with
+   the project slug you want to use (e.g. your repo name). We'll send back a
+   token within one business day.
+2. Add it as a repo secret called `IK_TOKEN`:
+   ```sh
+   gh secret set IK_TOKEN --repo your-org/your-repo
+   ```
 3. Drop a `.ik.yaml` into your repo (run `ik init` locally if you don't have
    one yet).
 4. Add `.github/workflows/ik.yml`:
@@ -107,6 +111,12 @@ That requires `pull-requests: write` on the workflow's `permissions:` block.
 coupling, complexity, magic-numbers, todo-density, dead-code, hotspots) — and
 combines the results into a single 0–100 score. Findings the PR introduces or
 fixes are diffed against the base branch's most recent scan.
+
+## Questions, bug reports, or want a token?
+
+Email **[hello@inkode.co](mailto:hello@inkode.co)** — fastest path to a push
+token, a feature request, or a bug report. For action-specific issues you can
+also [open an issue](https://github.com/iszlai/ik-action/issues).
 
 ## License
 
