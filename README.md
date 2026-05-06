@@ -23,8 +23,8 @@ overall score.
 
 ## Quickstart
 
-1. Sign in to [ik.inkode.co](https://ik.inkode.co), open your project's admin
-   page, and create a push token under **Push tokens**.
+1. Sign in to your inkode admin page, open your project, and create a push
+   token under **Push tokens**.
 2. Add it as a repo secret called `IK_TOKEN`.
 3. Drop a `.ik.yaml` into your repo (run `ik init` locally if you don't have
    one yet).
@@ -56,7 +56,7 @@ That's it.
 | Name        | Default                  | Description |
 |-------------|--------------------------|-------------|
 | `token`     | _(required)_             | Project push token (set as a repo secret). |
-| `endpoint`  | `https://ik.inkode.co`   | inkode server URL. Override for self-hosted instances. |
+| `endpoint`  | `https://api.inkode.co`  | inkode server URL. Override for self-hosted instances. |
 | `fail-on`   | `new-errors`             | Policy that decides exit code. See below. |
 | `output`    | `github-annotations`     | `human` \| `json` \| `github-annotations` \| `sarif`. |
 | `comment`   | `true`                   | Post (or update) a sticky PR comment. |

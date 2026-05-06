@@ -39,7 +39,7 @@ jobs:
             slug: iszlai-ik-action
             email: selftest@inkode.co
           api:
-            endpoint: https://ik.inkode.co
+            endpoint: https://api.inkode.co
           output:
             brief_path: .ik/brief.html
           checks:

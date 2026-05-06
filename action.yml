@@ -11,7 +11,7 @@ inputs:
     required: true
   endpoint:
     description: 'inkode server URL.'
-    default: 'https://ik.inkode.co'
+    default: 'https://api.inkode.co'
   fail-on:
     description: 'Policy: never | score:N | new-errors | new-warnings | score-drop:N'
     default: 'new-errors'
@@ -99,10 +99,15 @@ runs:
         REPORT_URL=$(grep -oE 'https?://[^[:space:]]+/r/[A-Za-z0-9_-]+' "${RUNNER_TEMP}/ik-output.txt" | head -1 || true)
         NANOID=""
         if [ -n "$REPORT_URL" ]; then NANOID="${REPORT_URL##*/}"; fi
+        UPLOAD_FAILED=0
+        if grep -qE "upload failed|upload skipped" "${RUNNER_TEMP}/ik-output.txt"; then
+          UPLOAD_FAILED=1
+        fi
         {
           echo "report-url=${REPORT_URL}"
           echo "nanoid=${NANOID}"
           echo "ik-exit=${ik_exit}"
+          echo "upload-failed=${UPLOAD_FAILED}"
         } >> "$GITHUB_OUTPUT"
         exit 0  # actual fail-on enforcement happens at the end
 
@@ -148,11 +153,24 @@ runs:
         header: inkode
         path: ${{ steps.diff.outputs.comment-path }}
 
-    # ── 5. Re-emit ik's exit code ────────────────────────────────────────────
-    - name: Enforce fail-on policy
+    # ── 5. Re-emit ik's exit code, plus surface a silent upload failure ─────
+    #
+    # ik treats a failed upload as a warning (the local brief still exists)
+    # and only respects --fail-on. With --fail-on=never that means a network
+    # blip can produce a green check that hid an unreachable server. We
+    # explicitly fail the action when the upload didn't land — the whole
+    # point of the action is the server-side diff + sticky comment.
+    - name: Enforce fail-on policy + upload success
       shell: bash
       run: |
+        UP_FAILED='${{ steps.run.outputs.upload-failed }}'
+        NANOID='${{ steps.run.outputs.nanoid }}'
         IK_EXIT='${{ steps.run.outputs.ik-exit }}'
+
+        if [ "$UP_FAILED" = "1" ] || [ -z "$NANOID" ]; then
+          echo "::error::ik run did not upload a report — check the endpoint input is reachable from this runner"
+          exit 1
+        fi
         if [ -z "$IK_EXIT" ] || [ "$IK_EXIT" = "0" ]; then
           exit 0
         fi
