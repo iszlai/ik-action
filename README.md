@@ -23,13 +23,16 @@ overall score.
 
 ## Quickstart
 
-1. **Get a push token**: email [hello@inkode.co](mailto:hello@inkode.co) with
-   the project slug you want to use (e.g. your repo name). We'll send back a
-   token within one business day.
+1. **Get a trial token in 30 seconds**: visit [api.inkode.co/ci/start](https://api.inkode.co/ci/start),
+   enter a project slug + your email. You get a token good for 10 CI runs over
+   30 days — enough to wire it up and see a few PRs land.
 2. Add it as a repo secret called `IK_TOKEN`:
    ```sh
    gh secret set IK_TOKEN --repo your-org/your-repo
    ```
+
+Need more than 10 runs (or a custom slug already in use)? Email
+[hello@inkode.co](mailto:hello@inkode.co) and we'll mint an unlimited token.
 3. Drop a `.ik.yaml` into your repo (run `ik init` locally if you don't have
    one yet).
 4. Add `.github/workflows/ik.yml`:
