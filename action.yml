@@ -1,5 +1,5 @@
-name: 'inkode'
-description: 'Run inkode (ik) against this repository and report findings on every PR.'
+name: 'Inkode CI'
+description: 'Code quality scanner for every PR. 17 checks across Go, Python, JavaScript, TypeScript, Java, and Rust — secrets, CVEs, complexity, duplication, dead code, and more. Inline annotations + sticky PR comment + pass/fail check.'
 author: 'inkode'
 branding:
   icon: 'check-circle'
