@@ -2,7 +2,7 @@ name: 'Inkode CI'
 description: 'Code quality on every PR: secrets, CVEs, complexity, duplication, dead code. Go, Python, JS/TS, Java, Rust.'
 author: 'inkode'
 branding:
-  icon: 'check-circle'
+  icon: 'bar-chart-2'
   color: 'purple'
 
 inputs:
