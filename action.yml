@@ -1,5 +1,5 @@
 name: 'Inkode CI'
-description: 'Code quality scanner for every PR. 17 checks across Go, Python, JavaScript, TypeScript, Java, and Rust — secrets, CVEs, complexity, duplication, dead code, and more. Inline annotations + sticky PR comment + pass/fail check.'
+description: 'Code quality on every PR: secrets, CVEs, complexity, duplication, dead code. Go, Python, JS/TS, Java, Rust.'
 author: 'inkode'
 branding:
   icon: 'check-circle'
