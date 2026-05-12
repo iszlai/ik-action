@@ -18,24 +18,26 @@ overall score.
 - **A sticky PR comment** — single comment, updated on subsequent runs —
   listing new findings introduced by the PR and findings the PR fixed.
 - **A status check** that passes/fails according to your `--fail-on` policy.
-- **Trend data** on `https://ik.inkode.co/p/<your-project>` once you have at
-  least two reports on `main`.
+- **A shareable report URL** like `https://api.inkode.co/r/<id>` for every
+  scan, exposed as the action's `report-url` output and embedded in the
+  sticky comment.
 
 ## Quickstart
 
-1. **Get a trial token in 30 seconds**: visit [api.inkode.co/ci/start](https://api.inkode.co/ci/start),
-   enter a project slug + your email. You get a token good for 10 CI runs over
-   30 days — enough to wire it up and see a few PRs land.
-2. Add it as a repo secret called `IK_TOKEN`:
+1. **Get a trial token in 30 seconds.** Visit
+   [api.inkode.co/ci/start](https://api.inkode.co/ci/start), enter a project
+   slug + your email. You get a token good for 10 CI runs over 30 days —
+   enough to wire it up and see a few PRs land. Need more than 10 (or a
+   custom slug that's already taken)? Email
+   [hello@inkode.co](mailto:hello@inkode.co) and we'll mint an unlimited
+   token.
+2. **Add it as a repo secret called `IK_TOKEN`:**
    ```sh
    gh secret set IK_TOKEN --repo your-org/your-repo
    ```
-
-Need more than 10 runs (or a custom slug already in use)? Email
-[hello@inkode.co](mailto:hello@inkode.co) and we'll mint an unlimited token.
-3. Drop a `.ik.yaml` into your repo (run `ik init` locally if you don't have
-   one yet).
-4. Add `.github/workflows/ik.yml`:
+3. **Drop a `.ik.yaml` into your repo** (run `ik init` locally if you don't
+   have one yet).
+4. **Add `.github/workflows/ik.yml`:**
 
 ```yaml
 name: ik
@@ -109,11 +111,16 @@ That requires `pull-requests: write` on the workflow's `permissions:` block.
 
 ## What `ik` actually does
 
-[inkode](https://inkode.co) runs static checks across categories — security
-(secrets, dep-audit), testing (test-presence), maintainability (duplication,
-coupling, complexity, magic-numbers, todo-density, dead-code, hotspots) — and
-combines the results into a single 0–100 score. Findings the PR introduces or
-fixes are diffed against the base branch's most recent scan.
+[inkode](https://inkode.co) runs 17 static checks across five categories —
+**security** (secrets, dep-audit, infra, scripts, error-handling),
+**testing** (test-presence), **maintainability** (duplication, coupling,
+import-graph, dead-code, magic-numbers, todo-density), **complexity**
+(cyclomatic complexity per function, line count), and **change risk**
+(git hotspots). Two more informational checks (semantic duplication via
+an embedded LLM, AI-tool stack detection) surface in the report without
+affecting the score. Languages covered: Go, Python, JavaScript, TypeScript,
+Java, and Rust. Findings the PR introduces or fixes are diffed against the
+base branch's most recent scan.
 
 ## Questions, bug reports, or want a token?
 
