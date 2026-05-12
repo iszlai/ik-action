@@ -21,6 +21,12 @@ overall score.
 - **A shareable report URL** like `https://api.inkode.co/r/<id>` for every
   scan, exposed as the action's `report-url` output and embedded in the
   sticky comment.
+- **Public trend page + status badge** at `https://api.inkode.co/p/<your-
+  project>` (opt-in via the per-project admin page). Drop the badge into
+  your README:
+  ```markdown
+  [![inkode](https://api.inkode.co/p/your-project/badge.svg)](https://api.inkode.co/p/your-project)
+  ```
 
 ## Quickstart
 
